@@ -1,0 +1,1090 @@
+import React, { useMemo, useState } from "react";
+import { motion } from "framer-motion";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import {
+  BarChart3,
+  CheckCircle2,
+  ChevronRight,
+  Filter,
+  Heart,
+  LayoutDashboard,
+  Mail,
+  MapPin,
+  MessageCircle,
+  Plus,
+  Search,
+  Shield,
+  Star,
+  Store,
+  Tag,
+  Users,
+} from "lucide-react";
+
+/**
+ * Marketplace Website (single-file starter)
+ * - One account can be buyer + seller.
+ * - Two listing types: Buy/Sell (items) and Services.
+ * - NO in-app payments (discovery + messaging only).
+ * - Includes UI shells for: Buyer, Seller, Developer/Admin.
+ *
+ * This is front-end only. You can wire it to a real backend later.
+ */
+
+const CONFIG = {
+  brand: {
+    name: "UnivMarket",
+    tagline: "Campus buy/sell + services — pay off-platform.",
+    primaryCta: "Post a listing",
+    secondaryCta: "Browse",
+  },
+  nav: [
+    { label: "Browse", href: "#browse" },
+    { label: "How it works", href: "#how" },
+    { label: "Safety", href: "#safety" },
+    { label: "FAQ", href: "#faq" },
+    { label: "Contact", href: "#contact" },
+  ],
+  hero: {
+    headline: "Buy, sell, or hire — all in one place.",
+    subhead:
+      "A Marketplace-style app: listings, service offers, search, saves, and messaging. Payments happen off-app.",
+    bullets: [
+      "Buy/Sell listings + Service listings",
+      "In-app messaging (no payments)",
+      "Seller dashboard + Admin console",
+    ],
+  },
+  categories: {
+    buySell: ["Electronics", "Home", "Furniture", "Vehicles", "Kids", "Free"],
+    services: ["Handyman", "Cleaning", "Moving", "Tutoring", "Photography", "Yardwork"],
+  },
+  faq: [
+    {
+      q: "Do payments go through the app?",
+      a: "No. This app is for discovery + messaging. Payment is handled off-platform between participants.",
+    },
+    {
+      q: "What’s the difference between Buy/Sell and Services?",
+      a: "Buy/Sell is for items. Services is for work you can hire someone to do (or offer as a provider).",
+    },
+    {
+      q: "Can the same user buy and sell?",
+      a: "Yes. One account can browse, message, post item listings, and post service listings.",
+    },
+  ],
+};
+
+const MOCK_LISTINGS = [
+  {
+    id: "l1",
+    type: "item",
+    title: "IKEA Desk — Like New",
+    priceLabel: "$60",
+    location: "Main Quad",
+    category: "Furniture",
+    postedAt: "2h",
+    description: "Great condition. Pickup only. Message to coordinate a meetup.",
+    seller: { name: "Alex", rating: 4.8 },
+    tags: ["Pickup", "Cash/Venmo"],
+  },
+  {
+    id: "l2",
+    type: "item",
+    title: "Nintendo Switch Bundle",
+    priceLabel: "$220",
+    location: "Student Union",
+    category: "Electronics",
+    postedAt: "1d",
+    description: "Includes console + 2 games. Meet in public place. No shipping.",
+    seller: { name: "Riley", rating: 4.6 },
+    tags: ["Meetup", "No trades"],
+  },
+  {
+    id: "s1",
+    type: "service",
+    title: "Handyman — Small Repairs",
+    priceLabel: "$45/hr",
+    location: "On-campus",
+    category: "Handyman",
+    postedAt: "3d",
+    description:
+      "Drywall patches, door fixes, mounting, minor plumbing. Free estimates via chat.",
+    seller: { name: "Jordan", rating: 4.9 },
+    tags: ["Estimates", "Weekends"],
+  },
+  {
+    id: "s2",
+    type: "service",
+    title: "House Cleaning",
+    priceLabel: "$120+",
+    location: "Near campus",
+    category: "Cleaning",
+    postedAt: "5d",
+    description:
+      "Weekly/biweekly. Bring supplies if needed. Message for availability.",
+    seller: { name: "Sam", rating: 4.7 },
+    tags: ["Recurring", "Supplies"],
+  },
+];
+
+const UNIVERSITY_OPTIONS = [
+  {
+    id: "utah",
+    name: "University of Utah",
+    short: "Utah",
+    theme: {
+      // Utah brand vibe (approx): red + white
+      primary: "#CC0000",
+      onPrimary: "#FFFFFF",
+      ring: "#CC0000",
+    },
+  },
+  {
+    id: "byu",
+    name: "Brigham Young University",
+    short: "BYU",
+    theme: {
+      primary: "#002E5D",
+      onPrimary: "#FFFFFF",
+      ring: "#002E5D",
+    },
+  },
+];
+
+function cx(...classes) {
+  return classes.filter(Boolean).join(" ");
+}
+
+function Container({ children, className }) {
+  return (
+    <div className={cx("mx-auto w-full max-w-6xl px-4 sm:px-6", className)}>
+      {children}
+    </div>
+  );
+}
+
+function Pill({ children }) {
+  return (
+    <div className="inline-flex items-center gap-2 rounded-full border bg-background/60 px-3 py-1 text-xs">
+      <CheckCircle2 className="h-4 w-4" />
+      <span>{children}</span>
+    </div>
+  );
+}
+
+function SectionTitle({ eyebrow, title, desc }) {
+  return (
+    <div className="mx-auto max-w-2xl text-center">
+      {eyebrow ? (
+        <div className="mb-3 flex items-center justify-center gap-2">
+          <Badge variant="secondary" className="rounded-full px-3 py-1">
+            {eyebrow}
+          </Badge>
+        </div>
+      ) : null}
+      <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+        {title}
+      </h2>
+      {desc ? (
+        <p className="mt-3 text-sm text-muted-foreground sm:text-base">{desc}</p>
+      ) : null}
+    </div>
+  );
+}
+
+function TopNav({ activePortal, setActivePortal, university, theme, onChangeUniversity }) {
+  return (
+    <header
+      className="sticky top-0 z-40 border-b bg-background/70 backdrop-blur"
+      style={{ "--brand": theme.primary, "--brandOn": theme.onPrimary }}
+    >
+      <Container className="flex h-16 items-center justify-between">
+        <a href="#" className="flex items-center gap-2">
+          <div className="grid h-9 w-9 place-items-center rounded-xl border bg-[var(--brand)] text-[var(--brandOn)]">
+            <Store className="h-5 w-5" />
+          </div>
+          <div className="leading-tight">
+            <div className="text-sm font-semibold">{CONFIG.brand.name}</div>
+            <div className="mt-0.5 text-[11px] text-muted-foreground">
+              {university ? university.name : "Choose a university"}
+              {onChangeUniversity ? (
+                <button
+                  className="ml-2 underline underline-offset-2 hover:text-foreground"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onChangeUniversity();
+                  }}
+                >
+                  Change
+                </button>
+              ) : null}
+            </div>
+            <div className="text-xs text-muted-foreground">{CONFIG.brand.tagline}</div>
+          </div>
+        </a>
+
+        <nav className="hidden items-center gap-1 md:flex">
+          {CONFIG.nav.map((n) => (
+            <a
+              key={n.href}
+              href={n.href}
+              className="rounded-lg px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+            >
+              {n.label}
+            </a>
+          ))}
+          <Button
+            className="ml-2 rounded-xl bg-[var(--brand)] text-[var(--brandOn)] hover:opacity-90"
+            onClick={() => setActivePortal("seller")}
+          >
+            {CONFIG.brand.primaryCta} <ChevronRight className="ml-1 h-4 w-4" />
+          </Button>
+        </nav>
+
+        <div className="hidden md:flex items-center gap-2">
+          <Badge variant={activePortal === "buyer" ? "default" : "secondary"} className="cursor-pointer" onClick={() => setActivePortal("buyer")}
+          >Buyer</Badge>
+          <Badge variant={activePortal === "seller" ? "default" : "secondary"} className="cursor-pointer" onClick={() => setActivePortal("seller")}
+          >Seller</Badge>
+          <Badge variant={activePortal === "dev" ? "default" : "secondary"} className="cursor-pointer" onClick={() => setActivePortal("dev")}
+          >Dev/Admin</Badge>
+        </div>
+      </Container>
+    </header>
+  );
+}
+
+function ListingCard({ item, onOpen, onSave }) {
+  return (
+    <Card className="rounded-2xl">
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <CardTitle className="text-base truncate">{item.title}</CardTitle>
+            <CardDescription className="mt-1 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1">
+                <Tag className="h-3.5 w-3.5" /> {item.category}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3.5 w-3.5" /> {item.location}
+              </span>
+              <span className="text-xs">• {item.postedAt}</span>
+              <Badge variant={item.type === "service" ? "secondary" : "outline"} className="rounded-full">
+                {item.type === "service" ? "Service" : "Buy/Sell"}
+              </Badge>
+            </CardDescription>
+          </div>
+          <div className="shrink-0 text-right">
+            <div className="text-sm font-semibold">{item.priceLabel}</div>
+            <div className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <Star className="h-3.5 w-3.5" /> {item.seller.rating}
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <p className="text-sm text-muted-foreground line-clamp-2">{item.description}</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {item.tags.map((t) => (
+            <Badge key={t} variant="secondary" className="rounded-full">
+              {t}
+            </Badge>
+          ))}
+        </div>
+        <div className="mt-4 flex items-center justify-between gap-2">
+          <Button variant="secondary" className="rounded-xl" onClick={() => onOpen(item)}>
+            View
+          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" className="rounded-xl" onClick={() => onSave(item)}>
+              <Heart className="mr-2 h-4 w-4" /> Save
+            </Button>
+            <Button className="rounded-xl" onClick={() => onOpen(item)}>
+              <MessageCircle className="mr-2 h-4 w-4" /> Message
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function BuyerPortal() {
+  const [mode, setMode] = useState("all"); // all | item | service
+  const [q, setQ] = useState("");
+  const [saved, setSaved] = useState([]);
+  const [active, setActive] = useState(null);
+
+  const listings = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return MOCK_LISTINGS.filter((x) => {
+      const typeOk = mode === "all" ? true : x.type === mode;
+      const qOk = !needle
+        ? true
+        : [x.title, x.description, x.category, x.location]
+            .join(" ")
+            .toLowerCase()
+            .includes(needle);
+      return typeOk && qOk;
+    });
+  }, [mode, q]);
+
+  function onSave(item) {
+    setSaved((prev) => (prev.some((s) => s.id === item.id) ? prev : [...prev, item]));
+  }
+
+  return (
+    <div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="text-sm font-semibold">Buyer view</div>
+          <div className="text-xs text-muted-foreground">
+            Browse listings and services. Arrange payment off-platform.
+          </div>
+        </div>
+        <div className="flex flex-1 items-center gap-2 sm:justify-end">
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search items, services, categories…"
+              className="pl-9 rounded-xl"
+            />
+          </div>
+          <Button variant="outline" className="rounded-xl" onClick={() => setMode((m) => (m === "all" ? "item" : m === "item" ? "service" : "all"))}>
+            <Filter className="mr-2 h-4 w-4" />
+            {mode === "all" ? "All" : mode === "item" ? "Buy/Sell" : "Services"}
+          </Button>
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2 grid gap-4 sm:grid-cols-2">
+          {listings.map((item) => (
+            <ListingCard key={item.id} item={item} onOpen={setActive} onSave={onSave} />
+          ))}
+        </div>
+
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle className="text-base">Saved</CardTitle>
+            <CardDescription>Quick access to things you like.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {saved.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                Save listings to see them here.
+              </div>
+            ) : (
+              saved.map((s) => (
+                <button
+                  key={s.id}
+                  className="w-full rounded-xl border px-3 py-2 text-left hover:bg-muted"
+                  onClick={() => setActive(s)}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium">{s.title}</div>
+                      <div className="text-xs text-muted-foreground truncate">
+                        {s.priceLabel} • {s.location}
+                      </div>
+                    </div>
+                    <Badge variant="secondary" className="rounded-full">
+                      {s.type === "service" ? "Service" : "Buy/Sell"}
+                    </Badge>
+                  </div>
+                </button>
+              ))
+            )}
+
+            <div className="pt-3">
+              <div className="rounded-xl border bg-muted/30 p-3 text-xs text-muted-foreground">
+                <span className="font-medium text-foreground">Reminder:</span> Payments do not happen in-app.
+                Use chat to coordinate and meet safely.
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {active ? (
+        <div className="mt-6">
+          <Card className="rounded-2xl">
+            <CardHeader>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <CardTitle className="text-lg">{active.title}</CardTitle>
+                  <CardDescription className="mt-1 flex flex-wrap items-center gap-2">
+                    <Badge className="rounded-full">
+                      {active.type === "service" ? "Service" : "Buy/Sell"}
+                    </Badge>
+                    <span className="inline-flex items-center gap-1">
+                      <Tag className="h-3.5 w-3.5" /> {active.category}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" /> {active.location}
+                    </span>
+                  </CardDescription>
+                </div>
+                <div className="text-right">
+                  <div className="text-lg font-semibold">{active.priceLabel}</div>
+                  <div className="mt-1 inline-flex items-center gap-1 text-xs text-muted-foreground">
+                    <Users className="h-3.5 w-3.5" /> Seller: {active.seller.name}
+                  </div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">{active.description}</p>
+
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="rounded-2xl border p-4">
+                  <div className="text-sm font-semibold">Message seller</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    Coordinate details here. Payment is off-platform.
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <Input className="rounded-xl" placeholder="Write a message…" />
+                    <Button className="rounded-xl">
+                      <Mail className="mr-2 h-4 w-4" /> Send
+                    </Button>
+                  </div>
+                </div>
+                <div className="rounded-2xl border p-4">
+                  <div className="text-sm font-semibold">Safety tips</div>
+                  <ul className="mt-2 space-y-2 text-xs text-muted-foreground">
+                    <li>• Meet in a public place.</li>
+                    <li>• Bring a friend if possible.</li>
+                    <li>• Use in-app reporting for suspicious listings.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Badge variant="secondary" className="rounded-full">
+                  No in-app payments
+                </Badge>
+                <Badge variant="secondary" className="rounded-full">
+                  Messaging supported
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function SellerPortal() {
+  const [tab, setTab] = useState("my");
+  const [type, setType] = useState("item");
+  const [title, setTitle] = useState("");
+  const [desc, setDesc] = useState("");
+  const [price, setPrice] = useState("");
+  const [location, setLocation] = useState("");
+  const [category, setCategory] = useState("");
+  const [mine, setMine] = useState(MOCK_LISTINGS.slice(0, 2));
+
+  const catOptions = type === "service" ? CONFIG.categories.services : CONFIG.categories.buySell;
+
+  function submit() {
+    if (!title.trim() || !price.trim()) return;
+    const newItem = {
+      id: String(Date.now()),
+      type,
+      title: title.trim(),
+      description: desc.trim() || "(No description)",
+      priceLabel: price.trim(),
+      location: location.trim() || "(Not set)",
+      category: category || catOptions[0],
+      postedAt: "just now",
+      seller: { name: "You", rating: 5.0 },
+      tags: ["Off-app payment"],
+    };
+    setMine((prev) => [newItem, ...prev]);
+    setTab("my");
+    setTitle("");
+    setDesc("");
+    setPrice("");
+    setLocation("");
+    setCategory("");
+  }
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      <Card className="rounded-2xl lg:col-span-2">
+        <CardHeader>
+          <CardTitle className="text-base">Seller dashboard</CardTitle>
+          <CardDescription>Post items or services. Manage inquiries.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Tabs value={tab} onValueChange={setTab}>
+            <TabsList className="rounded-xl">
+              <TabsTrigger value="my" className="rounded-xl">My listings</TabsTrigger>
+              <TabsTrigger value="new" className="rounded-xl">New listing</TabsTrigger>
+              <TabsTrigger value="inbox" className="rounded-xl">Inbox</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="my" className="mt-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {mine.map((x) => (
+                  <Card key={x.id} className="rounded-2xl">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">{x.title}</CardTitle>
+                      <CardDescription className="flex items-center gap-2">
+                        <Badge variant={x.type === "service" ? "secondary" : "outline"} className="rounded-full">
+                          {x.type === "service" ? "Service" : "Buy/Sell"}
+                        </Badge>
+                        <span className="text-xs">{x.priceLabel}</span>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      <div className="text-xs text-muted-foreground">
+                        {x.category} • {x.location}
+                      </div>
+                      <div className="mt-3 flex gap-2">
+                        <Button variant="secondary" className="rounded-xl" size="sm">
+                          Edit
+                        </Button>
+                        <Button variant="outline" className="rounded-xl" size="sm">
+                          Archive
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="new" className="mt-4">
+              <div className="grid gap-3">
+                <div className="grid gap-2 sm:grid-cols-2">
+                  <div className="rounded-2xl border p-3">
+                    <div className="text-xs font-medium text-muted-foreground">Listing type</div>
+                    <div className="mt-2 flex gap-2">
+                      <Button
+                        variant={type === "item" ? "default" : "outline"}
+                        className="rounded-xl"
+                        onClick={() => setType("item")}
+                      >
+                        Buy/Sell
+                      </Button>
+                      <Button
+                        variant={type === "service" ? "default" : "outline"}
+                        className="rounded-xl"
+                        onClick={() => setType("service")}
+                      >
+                        Services
+                      </Button>
+                    </div>
+                    <div className="mt-2 text-xs text-muted-foreground">
+                      Payments are not supported in-app.
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border p-3">
+                    <div className="text-xs font-medium text-muted-foreground">Category</div>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {catOptions.map((c) => (
+                        <Badge
+                          key={c}
+                          variant={category === c ? "default" : "secondary"}
+                          className="cursor-pointer rounded-full"
+                          onClick={() => setCategory(c)}
+                        >
+                          {c}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" className="rounded-xl" />
+                <Textarea value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Description" className="rounded-xl" />
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Input value={price} onChange={(e) => setPrice(e.target.value)} placeholder={type === "service" ? "$ / hr (ex: $45/hr)" : "Price (ex: $60)"} className="rounded-xl" />
+                  <Input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location / service area" className="rounded-xl" />
+                  <Button className="rounded-xl" onClick={submit}>
+                    <Plus className="mr-2 h-4 w-4" /> Publish
+                  </Button>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Tip: add photos later when you wire storage (S3/R2).
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="inbox" className="mt-4">
+              <div className="rounded-2xl border p-4">
+                <div className="text-sm font-semibold">Messages (stub)</div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  This UI is ready to wire to real chat later.
+                </div>
+                <div className="mt-4 grid gap-2">
+                  {["Buyer: Is this available?", "Buyer: Can you do Saturday?"].map((m, i) => (
+                    <div key={i} className="rounded-xl border bg-muted/30 px-3 py-2 text-sm">
+                      {m}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-base">Seller checklist</CardTitle>
+          <CardDescription>Simple rules that keep things smooth.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          <Pill>Be clear about meetup/service area</Pill>
+          <Pill>State accepted payment methods</Pill>
+          <Pill>Respond quickly to messages</Pill>
+          <div className="rounded-2xl border p-3 text-xs text-muted-foreground">
+            <span className="font-medium text-foreground">Note:</span> No payments in-app. Keep all payment details in chat and meet safely.
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function DevPortal() {
+  const [q, setQ] = useState("");
+  const rows = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return MOCK_LISTINGS.filter((x) =>
+      !needle
+        ? true
+        : [x.title, x.description, x.category, x.location]
+            .join(" ")
+            .toLowerCase()
+            .includes(needle)
+    );
+  }, [q]);
+
+  return (
+    <div className="grid gap-4 lg:grid-cols-3">
+      <Card className="rounded-2xl lg:col-span-2">
+        <CardHeader>
+          <CardTitle className="text-base">Developer/Admin console</CardTitle>
+          <CardDescription>Moderate listings, handle reports, manage users.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search listings…" className="pl-9 rounded-xl" />
+            </div>
+            <Button variant="outline" className="rounded-xl">
+              <Shield className="mr-2 h-4 w-4" /> View reports
+            </Button>
+          </div>
+
+          <div className="grid gap-3">
+            {rows.map((x) => (
+              <div key={x.id} className="rounded-2xl border p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="truncate text-sm font-semibold">{x.title}</div>
+                      <Badge variant={x.type === "service" ? "secondary" : "outline"} className="rounded-full">
+                        {x.type === "service" ? "Service" : "Buy/Sell"}
+                      </Badge>
+                      <Badge variant="secondary" className="rounded-full">{x.category}</Badge>
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground truncate">
+                      {x.location} • {x.priceLabel} • Seller: {x.seller.name}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <Button variant="outline" size="sm" className="rounded-xl">Hide</Button>
+                    <Button variant="secondary" size="sm" className="rounded-xl">Flag</Button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="rounded-2xl">
+        <CardHeader>
+          <CardTitle className="text-base">Ops metrics (stub)</CardTitle>
+          <CardDescription>Quick health snapshot.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm">
+          <div className="flex items-center justify-between rounded-xl border px-3 py-2">
+            <span className="inline-flex items-center gap-2"><LayoutDashboard className="h-4 w-4" /> Active listings</span>
+            <span className="font-semibold">128</span>
+          </div>
+          <div className="flex items-center justify-between rounded-xl border px-3 py-2">
+            <span className="inline-flex items-center gap-2"><MessageCircle className="h-4 w-4" /> Messages/day</span>
+            <span className="font-semibold">410</span>
+          </div>
+          <div className="flex items-center justify-between rounded-xl border px-3 py-2">
+            <span className="inline-flex items-center gap-2"><Shield className="h-4 w-4" /> Reports open</span>
+            <span className="font-semibold">6</span>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            Wire this to real analytics later (PostHog, GA4, etc.).
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+export default function MarketplaceWebsite() {
+  const [portal, setPortal] = useState("buyer");
+  const [universityId, setUniversityId] = useState(null);
+
+  const university = useMemo(
+    () => UNIVERSITY_OPTIONS.find((u) => u.id === universityId) || null,
+    [universityId]
+  );
+
+  const theme = university?.theme || {
+    primary: "#111827",
+    onPrimary: "#FFFFFF",
+    ring: "#111827",
+  };
+
+  function UniversityPicker() {
+    const [picked, setPicked] = useState(universityId || "utah");
+
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="border-b">
+          <Container className="flex h-16 items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="grid h-9 w-9 place-items-center rounded-xl border">
+                <Store className="h-5 w-5" />
+              </div>
+              <div className="leading-tight">
+                <div className="text-sm font-semibold">{CONFIG.brand.name}</div>
+                <div className="text-xs text-muted-foreground">
+                  Pick your university to enter your campus marketplace.
+                </div>
+              </div>
+            </div>
+          </Container>
+        </header>
+
+        <main>
+          <Container className="py-12 sm:py-16">
+            <div className="mx-auto max-w-2xl">
+              <Card className="rounded-2xl">
+                <CardHeader>
+                  <CardTitle className="text-xl">Choose your university</CardTitle>
+                  <CardDescription>
+                    UnivMarket themes itself to your school’s colors. We’re launching at Utah first.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-4">
+                  <label className="grid gap-2">
+                    <span className="text-sm font-medium">University</span>
+                    <select
+                      className="h-10 w-full rounded-xl border bg-background px-3 text-sm"
+                      value={picked}
+                      onChange={(e) => setPicked(e.target.value)}
+                    >
+                      {UNIVERSITY_OPTIONS.map((u) => (
+                        <option key={u.id} value={u.id}>
+                          {u.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <div className="rounded-2xl border bg-muted/30 p-4">
+                    <div className="text-sm font-semibold">Launch campus: University of Utah</div>
+                    <div className="mt-1 text-sm text-muted-foreground">
+                      Utah uses a red + white theme. Payments remain off-app.
+                    </div>
+                  </div>
+
+                  <Button
+                    className="rounded-xl"
+                    style={{ backgroundColor: UNIVERSITY_OPTIONS.find((u) => u.id === picked)?.theme.primary, color: UNIVERSITY_OPTIONS.find((u) => u.id === picked)?.theme.onPrimary }}
+                    onClick={() => setUniversityId(picked)}
+                  >
+                    Enter {UNIVERSITY_OPTIONS.find((u) => u.id === picked)?.short} <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+
+                  <div className="text-xs text-muted-foreground">
+                    Note: the school list is currently a starter set. You can expand it to a full directory later.
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </Container>
+        </main>
+      </div>
+    );
+  }
+
+  if (!university) return <UniversityPicker />;
+
+  return (
+    <div className="min-h-screen bg-background" style={{ "--brand": theme.primary, "--brandOn": theme.onPrimary }}>
+      <TopNav
+        activePortal={portal}
+        setActivePortal={setPortal}
+        university={university}
+        theme={theme}
+        onChangeUniversity={() => setUniversityId(null)}
+      />
+
+      <main>
+        <section className="relative overflow-hidden border-b">
+          <Container className="py-12 sm:py-16">
+            <div className="grid gap-8 lg:grid-cols-2 lg:items-center">
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <div className="inline-flex items-center gap-2 rounded-full border bg-muted/30 px-3 py-1 text-xs">
+                  <BarChart3 className="h-4 w-4" /> {university.short} Marketplace
+                </div>
+                <h1 className="mt-4 text-3xl font-semibold tracking-tight sm:text-5xl">
+                  Buy, sell, or hire — on campus.
+                </h1>
+                <p className="mt-4 text-sm text-muted-foreground sm:text-base">
+                  A campus Marketplace-style app: listings, services, search, saves, and messaging.
+                  Payments happen off-app.
+                </p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  {CONFIG.hero.bullets.map((b) => (
+                    <Pill key={b}>{b}</Pill>
+                  ))}
+                </div>
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Button
+                    className="rounded-xl bg-[var(--brand)] text-[var(--brandOn)] hover:opacity-90"
+                    onClick={() => setPortal("seller")}
+                  >
+                    {CONFIG.brand.primaryCta} <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="rounded-xl"
+                    onClick={() => setPortal("buyer")}
+                  >
+                    {CONFIG.brand.secondaryCta}
+                  </Button>
+                </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.05 }}
+              >
+                <Card className="rounded-2xl">
+                  <CardHeader>
+                    <CardTitle className="text-base">Pick a portal</CardTitle>
+                    <CardDescription>
+                      Same account can do everything — buyer + seller.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="grid gap-3">
+                    <Button
+                      variant={portal === "buyer" ? "default" : "secondary"}
+                      className="justify-start rounded-xl"
+                      onClick={() => setPortal("buyer")}
+                    >
+                      <Users className="mr-2 h-4 w-4" /> Buyer: browse & message
+                    </Button>
+                    <Button
+                      variant={portal === "seller" ? "default" : "secondary"}
+                      className="justify-start rounded-xl"
+                      onClick={() => setPortal("seller")}
+                    >
+                      <Store className="mr-2 h-4 w-4" /> Seller: post & manage
+                    </Button>
+                    <Button
+                      variant={portal === "dev" ? "default" : "secondary"}
+                      className="justify-start rounded-xl"
+                      onClick={() => setPortal("dev")}
+                    >
+                      <Shield className="mr-2 h-4 w-4" /> Dev/Admin: moderate
+                    </Button>
+                    <div className="rounded-2xl border bg-muted/30 p-3 text-xs text-muted-foreground">
+                      Payments are not processed here. Use chat to coordinate and meet on campus.
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </div>
+          </Container>
+        </section>
+
+        <section id="browse" className="border-b">
+          <Container className="py-10 sm:py-12">
+            <div className="mb-6">
+              <SectionTitle
+                eyebrow="Product"
+                title={`${university.short} Marketplace experience`}
+                desc="Toggle between Buyer, Seller, and Dev/Admin views to see the three sides."
+              />
+            </div>
+
+            <Tabs value={portal} onValueChange={setPortal}>
+              <TabsList className="mx-auto grid w-full max-w-xl grid-cols-3 rounded-2xl">
+                <TabsTrigger value="buyer" className="rounded-2xl">Buyer</TabsTrigger>
+                <TabsTrigger value="seller" className="rounded-2xl">Seller</TabsTrigger>
+                <TabsTrigger value="dev" className="rounded-2xl">Dev/Admin</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="buyer" className="mt-6">
+                <BuyerPortal />
+              </TabsContent>
+              <TabsContent value="seller" className="mt-6">
+                <SellerPortal />
+              </TabsContent>
+              <TabsContent value="dev" className="mt-6">
+                <DevPortal />
+              </TabsContent>
+            </Tabs>
+          </Container>
+        </section>
+
+        <section id="how" className="border-b">
+          <Container className="py-10 sm:py-12">
+            <SectionTitle
+              eyebrow="Flow"
+              title="How it works"
+              desc="Two listing types, one account, and messaging — without processing payments."
+            />
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              {[{
+                title: "Post",
+                desc: "Create an item listing or a service offer from the Seller portal.",
+                icon: Plus,
+              }, {
+                title: "Discover",
+                desc: "Buyers browse, search, filter, and save listings.",
+                icon: Search,
+              }, {
+                title: "Message",
+                desc: "Use chat to coordinate details and payment off-platform.",
+                icon: MessageCircle,
+              }].map((s) => (
+                <Card key={s.title} className="rounded-2xl">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <s.icon className="h-4 w-4" /> {s.title}
+                    </CardTitle>
+                    <CardDescription>{s.desc}</CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          </Container>
+        </section>
+
+        <section id="safety" className="border-b">
+          <Container className="py-10 sm:py-12">
+            <SectionTitle
+              eyebrow="Safety"
+              title="Built for trust"
+              desc="Basic policies + moderation tools keep the marketplace usable."
+            />
+            <div className="mt-8 grid gap-4 md:grid-cols-3">
+              {[{
+                title: "Off-app payments",
+                desc: "No payment processing in the platform — discovery + messaging only.",
+              }, {
+                title: "Meet safe",
+                desc: "Encourage public campus meetup spots and reporting for suspicious activity.",
+              }, {
+                title: "Moderation",
+                desc: "Dev/Admin portal supports hiding, flagging, and reviewing listings.",
+              }].map((x) => (
+                <Card key={x.title} className="rounded-2xl">
+                  <CardHeader>
+                    <CardTitle className="text-base">{x.title}</CardTitle>
+                    <CardDescription>{x.desc}</CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          </Container>
+        </section>
+
+        <section id="faq" className="border-b">
+          <Container className="py-10 sm:py-12">
+            <SectionTitle eyebrow="FAQ" title="Common questions" />
+            <div className="mt-8 grid gap-4 md:grid-cols-2">
+              {CONFIG.faq.map((f) => (
+                <Card key={f.q} className="rounded-2xl">
+                  <CardHeader>
+                    <CardTitle className="text-base">{f.q}</CardTitle>
+                    <CardDescription>{f.a}</CardDescription>
+                  </CardHeader>
+                </Card>
+              ))}
+            </div>
+          </Container>
+        </section>
+
+        <section id="contact">
+          <Container className="py-10 sm:py-12">
+            <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+              <div>
+                <SectionTitle
+                  eyebrow="Contact"
+                  title={`Launching at ${university.name}`}
+                  desc="Next: auth, database, and real messaging."
+                />
+                <div className="mt-4 text-sm text-muted-foreground">
+                  You’ve defined a clear rule: <span className="font-medium text-foreground">no in-app payments</span>. That keeps the MVP simpler.
+                </div>
+              </div>
+              <Card className="rounded-2xl">
+                <CardHeader>
+                  <CardTitle className="text-base">Message</CardTitle>
+                  <CardDescription>Front-end only (demo).</CardDescription>
+                </CardHeader>
+                <CardContent className="grid gap-3">
+                  <Input placeholder="Name" className="rounded-xl" />
+                  <Input placeholder="Email (.edu)" className="rounded-xl" />
+                  <Textarea placeholder="What do you want to launch first: items, services, or both?" className="rounded-xl" />
+                  <Button className="rounded-xl bg-[var(--brand)] text-[var(--brandOn)] hover:opacity-90">
+                    <Mail className="mr-2 h-4 w-4" /> Send
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="mt-10 border-t pt-6 text-xs text-muted-foreground">
+              © {new Date().getFullYear()} {CONFIG.brand.name}. All rights reserved.
+            </div>
+          </Container>
+        </section>
+      </main>
+    </div>
+  );
+}
